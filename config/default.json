@@ -1,0 +1,91 @@
+{
+  "isDebug": true,
+  "default": {
+    "pageSize": 3
+  },
+  "server": {
+    "host": "localhost",
+    "port": "3000",
+    "domain": "nhutuit.com",
+    "basePath": "/api"
+  },
+  "thrift": {
+    "default": "vivu",
+    "servers": {
+      "vivu": {
+        "connection": {
+          "host": "localhost",
+          "port": 9021,
+          "maxConnections": 3,
+          "minConnections": 0
+        }
+      }
+    }
+  },
+  "logger": {
+    "isDebug": "true",
+    "name": "default"
+  },
+  "static": {
+    "storage": {
+      "default": {
+        "type": "local",
+        "absolutePath": "/home/nhutdev/my-project/nodejs/static",
+        "host": "cdn.nhutuit.com",
+        "basePath": "/"
+      }
+    }
+  },
+  "email": {
+    "default": {
+      "protocol": "smtps",
+      "sender": "VivuShop",
+      "email": "sunnyboy1019@gmail.com",
+      "password": "nhutnhut",
+      "host": "smtp.gmail.com",
+      "port": ""
+    }
+  },
+  "user": {
+    "prefix": "customer",
+    "autoProfile": true,
+    "className": "Customer",
+    "includes": ["customer_address"],
+    "authorization": [{
+      "name": "basic_token",
+      "type": "basic_token",
+      "allowQueryToken": true,
+      "allowMultipleHeaders": false,
+      "accessTokenName": "accessToken",
+      "storeName": "BasicAuthenticator"
+    }, {
+      "name": "validate_token",
+      "type": "oauth_bearer_local",
+      "allowQueryToken": true,
+      "allowMultipleHeaders": false,
+      "accessTokenName": "accessToken",
+      "tokenStore": "AccessToken"
+    }, {
+      "name": "merge_token_basic",
+      "type": "oauth_bearer_local_and_basic",
+      "allowQueryToken": true,
+      "allowMultipleHeaders": false,
+      "accessTokenName": "accessToken",
+      "tokenStore": "AccessToken",
+      "storeName": "BasicAuthenticator"
+    }]
+  },
+  "swagger": {
+    "info": {
+      "title": "VIVU API Documentation",
+      "version": "0.1.0",
+      "contact": {
+        "name": "Tran Van Nhut",
+        "email": "tranvannhut4495@gmail.com"
+      }
+    },
+    "jsonEditor": false,
+    "documentationPath": "/doc",
+    "jsonPath": "/shop/swagger.json"
+  }
+}
