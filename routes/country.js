@@ -2,8 +2,8 @@
  * @Author: Tran Van Nhut <nhutdev>
  * @Date:   2017-02-20T22:05:41+07:00
  * @Email:  tranvannhut4495@gmail.com
-* @Last modified by:   nhutdev
-* @Last modified time: 2017-02-21T13:27:32+07:00
+ * @Last modified by:   nhutdev
+ * @Last modified time: 2017-03-20T16:25:19+07:00
  */
 
 'use strict';
@@ -24,7 +24,7 @@ countryRoutes.addRoute({
   method: 'GET',
   path: '/countries',
   config: {
-    auth: 'basic_token',
+    auth: 'merge_validate',
     handler: countryController.getList,
     description: 'Request country code from country on the word',
     notes: 'Returns list country',

@@ -32,7 +32,7 @@
         "type": "local",
         "absolutePath": "/home/nhutdev/my-project/nodejs/static",
         "host": "cdn.nhutuit.com",
-        "basePath": "/"
+        "basePath": "/api"
       }
     }
   },
@@ -51,8 +51,9 @@
     "autoProfile": true,
     "className": "Customer",
     "includes": ["customer_address"],
+    "customizeFunction":true,
     "authorization": [{
-      "name": "basic_token",
+      "name": "validate_basic",
       "type": "basic_token",
       "allowQueryToken": true,
       "allowMultipleHeaders": false,
@@ -66,7 +67,7 @@
       "accessTokenName": "accessToken",
       "tokenStore": "AccessToken"
     }, {
-      "name": "merge_token_basic",
+      "name": "merge_validate",
       "type": "oauth_bearer_local_and_basic",
       "allowQueryToken": true,
       "allowMultipleHeaders": false,
@@ -86,6 +87,6 @@
     },
     "jsonEditor": false,
     "documentationPath": "/doc",
-    "jsonPath": "/shop/swagger.json"
+    "jsonPath": "/api/swagger.json"
   }
 }

@@ -2,8 +2,8 @@
  * @Author: Tran Van Nhut <nhutdev>
  * @Date:   2017-02-12T09:40:40+07:00
  * @Email:  tranvannhut4495@gmail.com
-* @Last modified by:   nhutdev
-* @Last modified time: 2017-02-22T21:43:41+07:00
+ * @Last modified by:   root
+ * @Last modified time: 2017-03-15T15:03:00+07:00
  */
 
 'use strict';
@@ -15,6 +15,8 @@ const vivuCommon = require('vivu-common-api');
 const customerSchema = vivuCommon.schemas.customer;
 const customerAddressSchema = vivuCommon.schemas.customerAddress;
 const tokenBusiness = vivuCommon.business.TokenBusiness;
+const customerAddressBusiness = vivuCommon.business.CustomerAddressBusiness;
+const options = helpers.ttypes.options;
 
 class CustomerController {
 
@@ -24,8 +26,10 @@ class CustomerController {
       customerStore = request.dataStore.getStore('Customer'),
       customerAddressStore = request.dataStore.getStore('CustomerAddress'),
       saltRounds = request.config.security.saltRounds,
-      params = request.auth.credentials,
-      countryStore = request.dataStore.getStore('Country');
+      params = request.auth.credentials;
+
+    form.address.countryCode = form.address.countryCode || request.config.i18n.country;
+
     return customerStore.getOneByEmail(form.email).then(() => {
 
       return reply(request.errorManager.translate({
@@ -41,7 +45,6 @@ class CustomerController {
         customerForm.passwordHash = hash;
 
         return customerStore.insertOne(customerForm).then(rawCustomer => {
-
           return tokenBusiness.createBearerToken(request, {
             hasRefreshToken: true,
             expiry: params.expiry,
@@ -52,12 +55,15 @@ class CustomerController {
             let type = customerAddressStore.createModel().typeAddress,
               modelCustomerAddress = customerAddressStore.createModel(form.address);
 
-            let func = (name) => {
+
+
+            let func = (opts) => {
               modelCustomerAddress.customerId = rawCustomer.id;
+              modelCustomerAddress.customerName = rawCustomer.fullName;
               modelCustomerAddress.type = type.CustomerAddress;
               modelCustomerAddress.isDefault = true;
               modelCustomerAddress.phone = rawCustomer.phone;
-              modelCustomerAddress.fullName = `${form.address.street},${form.address.city},${name}`;
+              modelCustomerAddress.fullName = `${opts.province},${opts.district},${opts.ward},${form.address.street},${opts.country}`;
 
               return customerAddressStore.insertOne(modelCustomerAddress).then(rawAddress => {
 
@@ -88,31 +94,45 @@ class CustomerController {
               });
 
             };
+            let formAddress = form.address;
 
-            return countryStore.getOne(form.address.countryCode).then(rawCountry => {
-              return func(rawCountry.name);
+            return customerAddressBusiness.getStringAddress(request, reply, {
+              countryCode: formAddress.countryCode,
+              provinceCode: formAddress.provinceCode,
+              districtCode: formAddress.districtCode,
+              wardCode: formAddress.wardCode
+            }).then(stringAddress => {
+              func(stringAddress);
             }).catch(err => {
-              request.log(['get country', err]);
-              if (request.config.i18n.country) {
-
-                return countryStore.getOne(request.config.i18n.country).then(rawCountry => {
-                  return func(rawCountry.name);
-                }).catch(err => {
-                  return helpers.HAPI.replyError(request, reply, err, {
-                    log: ['get country', err]
-                  });
-                });
-
-              }
-
-              return reply(request.errorManager.translate({
-                code: '503',
-                params: {
-                  countryCode: form.address.countryCode
-                }
-              })).code(400);
-
+              return helpers.HAPI.replyError(request, reply, err, {
+                log: ['error', 'get address']
+              });
             });
+
+            // return countryStore.getOne(form.address.countryCode).then(rawCountry => {
+            //   return func(rawCountry.name);
+            // }).catch(err => {
+            //   request.log(['get country', err]);
+            //   if (request.config.i18n.country) {
+
+            //     return countryStore.getOne(request.config.i18n.country).then(rawCountry => {
+            //       return func(rawCountry.name);
+            //     }).catch(err => {
+            //       return helpers.HAPI.replyError(request, reply, err, {
+            //         log: ['get country', err]
+            //       });
+            //     });
+
+            //   }
+
+            //   return reply(request.errorManager.translate({
+            //     code: '503',
+            //     params: {
+            //       countryCode: form.address.countryCode
+            //     }
+            //   })).code(400);
+
+          // });
           }).catch(err => {
 
             return helpers.HAPI.replyError(request, reply, err, {
@@ -187,18 +207,19 @@ class CustomerController {
       }).catch((e) => {
         let errors = helpers.Error.translate(e),
           code = helpers.Error.getCode(errors);
+        let userNotFound = helpers.Error.translate({
+          code: '315',
+          source: 'login'
+        });
         if (code == '202') {
-          let userNotFound = helpers.Error.translate({
-            code: '315',
-            source: 'login'
-          });
+
           return reply(userNotFound).code(400);
         }
-
-        return helpers.HAPI.replyError(request, reply, errors, {
-          log: ['error', 'oauth', 'password'],
-          rawError: e
-        });
+        return reply(userNotFound).code(400);
+      // return helpers.HAPI.replyError(request, reply, errors, {
+      //   log: ['error', 'oauth', 'password'],
+      //   rawError: e
+      // });
       });
     };
 
@@ -357,11 +378,13 @@ class CustomerController {
 
   getProfile(request, reply) {
 
-    let profile = request.auth.credentials.profile;
-    let resp = profile.responseObject({
-      schema: customerSchema.response
-    });
-    resp.address = profile.address.responseObject({
+    let customerStore = request.dataStore.getStore('Customer'),
+      customerAddressStore = request.dataStore.getStore('CustomerAddress'),
+      profile = request.auth.credentials.profile,
+      resp = customerStore.createModel(profile).responseObject({
+        schema: customerSchema.response
+      });
+    resp.address = customerAddressStore.createModel(profile.address).responseObject({
       schema: customerAddressSchema.response
     });
 
@@ -377,6 +400,69 @@ class CustomerController {
 
   }
 
+  updateProfile(request, reply) {
+    let customerStore = request.dataStore.getStore('Customer'),
+      customer = request.auth.credentials.profile,
+      form = request.payload.data,
+      saltRounds = request.config.security.saltRounds,
+      updateFuc = (form) => {
+
+        return customerStore.updateOne(customerStore.createModel({
+          id: customer.id,
+          fullName: form.fullName,
+          phone: form.phone,
+          dob: form.dob,
+          passwordHash: form.password ? form.password : null,
+          gender: form.gender
+        }), new options.SelectOptions()).then(resp => {
+
+          return reply(helpers.Json.response(request, {
+            meta: {
+              message: 'Update customer successfully'
+            },
+            data: {
+              customer: customerStore.createModel(resp).responseObject({
+                schema: customerSchema.response
+              })
+            }
+          }));
+
+        }).catch(err => {
+          return helpers.HAPI.replyError(request, reply, err, {
+            log: ['errors', 'update customer']
+          });
+        });
+      };
+
+    if (form.passwordNew) {
+      return bcrypt.compareAsync(form.passwordOld, customer.passwordHash).then((bool) => {
+
+        if (bool) {
+          return bcrypt.hashAsync(form.passwordNew, saltRounds).then(password => {
+            form.password = password;
+            return updateFuc(form);
+          }).catch(err => {
+            return helpers.HAPI.replyError(request, reply, err, {
+              log: ['errors', 'hashpassword fail']
+            });
+          });
+        }
+
+        return reply(request.errorManager.translate({
+          code: '112',
+          source: 'password'
+        })).code(400);
+
+      }).catch(() => {
+        return reply(request.errorManager.translate({
+          code: '112',
+          source: 'password'
+        })).code(400);
+      });
+    }
+    return updateFuc(form);
+  }
+
 }
 
-module.exports = new CustomerController();
+module.exports = CustomerController;

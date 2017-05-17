@@ -2,8 +2,8 @@
  * @Author: Tran Van Nhut <nhutdev>
  * @Date:   2017-02-20T22:05:41+07:00
  * @Email:  tranvannhut4495@gmail.com
-* @Last modified by:   nhutdev
-* @Last modified time: 2017-02-20T22:15:29+07:00
+ * @Last modified by:   nhutdev
+ * @Last modified time: 2017-03-20T16:27:57+07:00
  */
 
 'use strict';
@@ -24,7 +24,7 @@ tokenRoutes.addRoute({
   method: 'POST',
   path: '/tokens/refresh',
   config: {
-    auth: 'basic_token',
+    auth: 'validate_basic',
     handler: tokenController.refreshToken,
     description: 'Request token from server, using refresh token grant type',
     notes: 'Returns a access token item',
